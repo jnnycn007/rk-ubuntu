@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
-# apt update
-# apt install -y libqt5webengine5 qtwebengine5-examples
+#apt update
+#apt install -y libqt5webengine5 qtwebengine5-examples
 export mpp_syslog_perror=1
 
 echo performance | tee $(find /sys/ -name *governor)

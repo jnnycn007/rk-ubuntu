@@ -26,7 +26,7 @@ while true; do
 
   echo userspace > $NPU_PATH/governor
   FREQ=${FREQS[$RANDOM % ${#FREQS[@]} ]}
-  echo "set npu frequency to $FREQ"
+  echo "set ddr frequency to $FREQ"
   echo ${FREQ} > $NPU_PATH/userspace/set_freq
   sleep $2
   let "time_cnt=$time_cnt+$2"
