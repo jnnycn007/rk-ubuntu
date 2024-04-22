@@ -8,8 +8,11 @@ if [ ! $SOC ]; then
     echo "please enter soc number:"
     echo "请输入要构建CPU的序号:"
     echo "[0] Exit Menu"
-    echo "[1] rk3566/rk3568"
-    echo "[2] rk3588/rk3588s"
+    echo "[1] rk3128"
+    echo "[2] rk3528"
+    echo "[3] rk3562"
+    echo "[4] rk3566/rk3568"
+    echo "[5] rk3588/rk3588s"
     echo "---------------------------------------------------------"
     read input
 
@@ -17,9 +20,18 @@ if [ ! $SOC ]; then
         0)
             exit;;
         1)
-            SOC=rk356x
+            SOC=rk3128
             ;;
         2)
+            SOC=rk3528
+            ;;
+        3)
+            SOC=rk3562
+            ;;
+        4)
+            SOC=rk356x
+            ;;
+        5)
             SOC=rk3588
             ;;
         *)
@@ -76,6 +88,14 @@ install_packages() {
         rk3328|rk3528)
         MALI=utgard-450
         ISP=rkisp
+        ;;
+        rk3128|rk3036)
+        MALI=utgard-400
+        ISP=rkisp
+        ;;
+        rk3562)
+        MALI=bifrost-g52-g13p0
+        ISP=rkaiq_rk3562
         ;;
         rk356x|rk3566|rk3568)
         MALI=bifrost-g52-g13p0
@@ -152,15 +172,9 @@ sudo cp -rpf overlay-firmware/* $TARGET_ROOTFS_DIR/
 if [ "$VERSION" == "debug" ]; then
     sudo cp -rpf overlay-debug/* $TARGET_ROOTFS_DIR/
 fi
+
 ## hack the serial
 sudo cp -f overlay/usr/lib/systemd/system/serial-getty@.service $TARGET_ROOTFS_DIR/lib/systemd/system/serial-getty@.service
-
-# adb
-if [[ "$ARCH" == "armhf" && "$VERSION" == "debug" ]]; then
-    sudo cp -f overlay-debug/usr/local/share/adb/adbd-32 $TARGET_ROOTFS_DIR/usr/bin/adbd
-elif [[ "$ARCH" == "arm64" && "$VERSION" == "debug" ]]; then
-    sudo cp -f overlay-debug/usr/local/share/adb/adbd-64 $TARGET_ROOTFS_DIR/usr/bin/adbd
-fi
 
 echo -e "\033[47;36m Change root.....................\033[0m"
 if [ "$ARCH" == "armhf" ]; then
@@ -169,7 +183,7 @@ elif [ "$ARCH" == "arm64"  ]; then
     sudo cp /usr/bin/qemu-aarch64-static $TARGET_ROOTFS_DIR/usr/bin/
 fi
 
-sudo mount -o bind /dev $TARGET_ROOTFS_DIR/dev
+./ch-mount.sh -m $TARGET_ROOTFS_DIR
 
 ID=$(stat --format %u $TARGET_ROOTFS_DIR)
 
@@ -199,45 +213,54 @@ apt-get upgrade -y
 chmod o+x /usr/lib/dbus-1.0/dbus-daemon-launch-helper
 chmod +x /etc/rc.local
 
+export DEBIAN_FRONTEND=noninteractive
 export APT_INSTALL="apt-get install -fy --allow-downgrades"
 
 echo -e "\033[47;36m ---------- LubanCat -------- \033[0m"
-\${APT_INSTALL} fire-config u-boot-tools logrotate
+if [ $MIRROR ]; then
+    \${APT_INSTALL} fire-config lbc-test
+fi
+
+\${APT_INSTALL} u-boot-tools edid-decode logrotate
 if [[ "$TARGET" == "gnome" || "$TARGET" == "gnome-full" ]]; then
-    \${APT_INSTALL} gdisk fire-config-gui
+    \${APT_INSTALL} gdisk
+    [[-z $MIRROR ]] && \${APT_INSTALL} fire-config-gui
     #Desktop background picture
     ln -sf /usr/share/xfce4/backdrops/lubancat-wallpaper.png /usr/share/backgrounds/warty-final-ubuntu.png
 elif [[ "$TARGET" == "xfce" || "$TARGET" == "xfce-full" ]]; then
     \apt-get remove -y gnome-bluetooth
-    \${APT_INSTALL} bluez bluez-tools fire-config-gui
+    \${APT_INSTALL} bluez bluez-tools
+    [[-z $MIRROR ]] && \${APT_INSTALL} fire-config-gui
     #Desktop background picture
     ln -sf /usr/share/xfce4/backdrops/lubancat-wallpaper.png /usr/share/xfce4/backdrops/xubuntu-wallpaper.png
 elif [ "$TARGET" == "lite" ]; then
     \${APT_INSTALL} bluez bluez-tools
 fi
 
-apt install -fy --allow-downgrades /packages/install_packages/*.deb
+\${APT_INSTALL} /packages/install_packages/*.deb
 
-apt install -fy --allow-downgrades /boot/kerneldeb/* || true
+\${APT_INSTALL} /boot/kerneldeb/* || true
 
-if [[ "$TARGET" == "gnome" ||  "$TARGET" == "xfce" || "$TARGET" == "gnome-full" || "$TARGET" == "xfce-full" ]]; then
-    echo -e "\033[47;36m ----- power management ----- \033[0m"
-    \${APT_INSTALL} pm-utils triggerhappy bsdmainutils
-    cp /etc/Powermanager/triggerhappy.service  /lib/systemd/system/triggerhappy.service
-fi
+echo -e "\033[47;36m ----- power management ----- \033[0m"
+\${APT_INSTALL} pm-utils triggerhappy bsdmainutils
+cp /etc/Powermanager/triggerhappy.service  /lib/systemd/system/triggerhappy.service
+sed -i "s/#HandlePowerKey=.*/HandlePowerKey=ignore/" /etc/systemd/logind.conf
 
 echo -e "\033[47;36m ----------- RGA  ----------- \033[0m"
 \${APT_INSTALL} /packages/rga2/*.deb
 
 if [[ "$TARGET" == "gnome" ||  "$TARGET" == "xfce" || "$TARGET" == "gnome-full" || "$TARGET" == "xfce-full" ]]; then
     echo -e "\033[47;36m ------ Setup Video---------- \033[0m"
-    \${APT_INSTALL} gstreamer1.0-plugins-bad gstreamer1.0-plugins-base gstreamer1.0-tools gstreamer1.0-alsa gstreamer1.0-plugins-base-apps qtmultimedia5-examples
+    \${APT_INSTALL} gstreamer1.0-plugins-bad gstreamer1.0-plugins-base gstreamer1.0-tools gstreamer1.0-alsa \
+    gstreamer1.0-plugins-base-apps qtmultimedia5-examples
+
     \${APT_INSTALL} /packages/mpp/*
     \${APT_INSTALL} /packages/gst-rkmpp/*.deb
     \${APT_INSTALL} /packages/gstreamer/*.deb
-    # \${APT_INSTALL} /packages/gst-plugins-base1.0/*.deb
-    # \${APT_INSTALL} /packages/gst-plugins-bad1.0/*.deb
-    # \${APT_INSTALL} /packages/gst-plugins-good1.0/*.deb	
+elif [ "$TARGET" == "lite" ]; then
+    echo -e "\033[47;36m ------ Setup Video---------- \033[0m"
+    \${APT_INSTALL} /packages/mpp/*
+    \${APT_INSTALL} /packages/gst-rkmpp/*.deb
 fi
 
 if [[ "$TARGET" == "gnome" ||  "$TARGET" == "xfce" || "$TARGET" == "gnome-full" || "$TARGET" == "xfce-full" ]]; then
@@ -247,7 +270,6 @@ if [[ "$TARGET" == "gnome" ||  "$TARGET" == "xfce" || "$TARGET" == "gnome-full" 
 elif [ "$TARGET" == "lite" ]; then
     echo -e "\033[47;36m ----- Install Camera ----- - \033[0m"
     \${APT_INSTALL} v4l-utils
-    \${APT_INSTALL} /packages/mpp/*
 fi
 
 if [[ "$TARGET" == "gnome" || "$TARGET" == "gnome-full" ]]; then
@@ -257,7 +279,7 @@ if [[ "$TARGET" == "gnome" || "$TARGET" == "gnome-full" ]]; then
 elif [[ "$TARGET" == "xfce" || "$TARGET" == "xfce-full" ]]; then
     echo -e "\033[47;36m ----- Install Xserver------- \033[0m"
     \${APT_INSTALL} /packages/xserver/*.deb
-    apt-mark hold xserver-common xserver-xorg-core xserver-xorg-legacy
+    # apt-mark hold xserver-common xserver-xorg-core xserver-xorg-legacy
 fi
 
 if [[ "$TARGET" == "gnome" ||  "$TARGET" == "xfce" || "$TARGET" == "gnome-full" || "$TARGET" == "xfce-full" ]]; then
@@ -273,9 +295,6 @@ echo -e "\033[47;36m ------- Install libdrm ------ \033[0m"
 if [[ "$TARGET" == "gnome" ||  "$TARGET" == "xfce" || "$TARGET" == "gnome-full" || "$TARGET" == "xfce-full" ]]; then
     echo -e "\033[47;36m ------ libdrm-cursor -------- \033[0m"
     \${APT_INSTALL} /packages/libdrm-cursor/*.deb
-    # Only preload libdrm-cursor for X
-    sed -i "/libdrm-cursor.so/d" /etc/ld.so.preload
-    sed -i "1aexport LD_PRELOAD=libdrm-cursor.so.1" /usr/bin/X
 fi
 
 if [[ "$TARGET" == "gnome" ||  "$TARGET" == "xfce" || "$TARGET" == "gnome-full" || "$TARGET" == "xfce-full" ]]; then
@@ -309,6 +328,11 @@ if [[ "$TARGET" == "gnome-full" || "$TARGET" == "xfce-full" ]]; then
     \${APT_INSTALL} /packages/embedfire/scratch_*.deb
 fi
 
+apt autoremove -y
+
+# mark package to hold
+apt list --installed | grep -v oldstable | cut -d/ -f1 | xargs apt-mark hold
+
 echo -e "\033[47;36m ------- Custom Script ------- \033[0m"
 systemctl mask systemd-networkd-wait-online.service
 systemctl mask NetworkManager-wait-online.service
@@ -318,18 +342,23 @@ rm /lib/systemd/system/wpa_supplicant@.service
 echo -e "\033[47;36m  ---------- Clean ----------- \033[0m"
 if [ -e "/usr/lib/arm-linux-gnueabihf/dri" ] ;
 then
+        # Only preload libdrm-cursor for X
+        sed -i "1aexport LD_PRELOAD=/usr/lib/arm-linux-gnueabihf/libdrm-cursor.so.1" /usr/bin/X
         cd /usr/lib/arm-linux-gnueabihf/dri/
-        cp kms_swrast_dri.so swrast_dri.so /
+        cp kms_swrast_dri.so swrast_dri.so rockchip_dri.so /
         rm /usr/lib/arm-linux-gnueabihf/dri/*.so
         mv /*.so /usr/lib/arm-linux-gnueabihf/dri/
 elif [ -e "/usr/lib/aarch64-linux-gnu/dri" ];
 then
+        # Only preload libdrm-cursor for X
+        sed -i "1aexport LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libdrm-cursor.so.1" /usr/bin/X
         cd /usr/lib/aarch64-linux-gnu/dri/
-        cp kms_swrast_dri.so swrast_dri.so /
+        cp kms_swrast_dri.so swrast_dri.so rockchip_dri.so /
         rm /usr/lib/aarch64-linux-gnu/dri/*.so
         mv /*.so /usr/lib/aarch64-linux-gnu/dri/
         rm /etc/profile.d/qt.sh
 fi
+
 rm -rf /home/$(whoami)
 rm -rf /var/lib/apt/lists/*
 rm -rf /var/cache/
@@ -338,6 +367,6 @@ rm -rf /boot/*
 
 EOF
 
-sudo umount $TARGET_ROOTFS_DIR/dev
+./ch-mount.sh -u $TARGET_ROOTFS_DIR
 
-IMAGE_VERSION=$TARGET ./mk-image.sh 
+source ./mk-image.sh 
