@@ -2,7 +2,49 @@
 
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 board_info() {
-    if [[ "$2" == "rk3566" ||  "$2" == "rk3568" ]]; then
+    if [[ "$2" == "rk3128" ]]; then
+        case $1 in
+            0000)
+                BOARD_NAME='LubanCat-0H'
+                BOARD_DTB='rk3128-lubancat-0h.dtb'
+                BOARD_uEnv='uEnvLubanCat0H.txt'
+                ;;
+            *)
+                echo "Device ID Error !!!"
+                BOARD_NAME='LubanCat-RK3128'
+                BOARD_DTB='rk3128-lubancat-generic.dtb'
+                BOARD_uEnv='uEnvLubanCat.txt'
+                ;;
+        esac
+    elif [[ "$2" == "rk3528" ||  "$2" == "rk3528a" ]]; then
+        case $1 in
+            0001)
+                BOARD_NAME='LubanCat-Q1'
+                BOARD_DTB='rk3528-lubancat-q1.dtb'
+                BOARD_uEnv='uEnvLubanCatQ1.txt'
+                ;;
+            *)
+                echo "Device ID Error !!!"
+                BOARD_NAME='LubanCat-RK3528'
+                BOARD_DTB='rk3528-lubancat-generic.dtb'
+                BOARD_uEnv='uEnvLubanCat.txt'
+                ;;
+        esac
+    elif [[ "$2" == "rk3562" ]]; then
+        case $1 in
+            0000)
+                BOARD_NAME='LubanCat-1HS'
+                BOARD_DTB='rk3562-lubancat-1hs.dtb'
+                BOARD_uEnv='uEnvLubanCat1HS.txt'
+                ;;
+            *)
+                echo "Device ID Error !!!"
+                BOARD_NAME='LubanCat-RK3562'
+                BOARD_DTB='rk3562-lubancat-generic.dtb'
+                BOARD_uEnv='uEnvLubanCat.txt'
+                ;;
+        esac
+    elif [[ "$2" == "rk3566" ||  "$2" == "rk3568" ]]; then
         case $1 in
             0000)
                 BOARD_NAME='LubanCat-1'
@@ -43,6 +85,11 @@ board_info() {
                 BOARD_NAME='LubanCat-0W'
                 BOARD_DTB='rk3566-lubancat-0.dtb'
                 BOARD_uEnv='uEnvLubanCatZW.txt'
+                ;;
+            0304)
+                BOARD_NAME='LubanCat-CM4'
+                BOARD_DTB='rk3566-lubancat-cm4.dtb'
+                BOARD_uEnv='uEnvLubanCatCM4.txt'
                 ;;
             0400)
                 BOARD_NAME='LubanCat-2'
@@ -87,25 +134,11 @@ board_info() {
                 ;;
             *)
                 echo "Device ID Error !!!"
-                BOARD_NAME='LubanCat-series.dtb'
-                BOARD_DTB='rk356x-lubancat-rk_series.dtb'
-                BOARD_uEnv='uEnvLubanCat-series.txt'
+                BOARD_NAME='LubanCat-RK356X'
+                BOARD_DTB='rk356x-lubancat-generic.dtb'
+                BOARD_uEnv='uEnvLubanCat.txt'
                 ;;
         esac
-    elif [[ "$2" == "rk3562" ]]; then
-		case $1 in
-            0000)
-                BOARD_NAME='LubanCat-A2IO'
-                BOARD_DTB='rk3562-lubancat-a2io.dtb'
-                BOARD_uEnv='uEnvLubanCatA2IO.txt'
-                ;;
-			*)
-				echo "Device ID Error !!!"
-				BOARD_NAME='LubanCat-series.dtb'
-				BOARD_DTB='rk3562-lubancat-rk_series.dtb'
-				BOARD_uEnv='uEnvLubanCat-series.txt'
-				;;	
-		esac
     elif [[ "$2" == "rk3588" ||  "$2" == "rk3588s" ]]; then
             case $1 in
             0101)
@@ -145,9 +178,9 @@ board_info() {
                 ;;
             *)
                 echo "Device ID Error !!!"
-                BOARD_NAME='LubanCat-series.dtb'
-                BOARD_DTB='rk3588-lubancat-rk_series.dtb'
-                BOARD_uEnv='uEnvLubanCat-series.txt'
+                BOARD_NAME='LubanCat-RK3588'
+                BOARD_DTB='rk3588-lubancat-generic.dtb'
+                BOARD_uEnv='uEnvLubanCat.txt'
                 ;;
         esac
     fi
@@ -158,10 +191,14 @@ board_info() {
 }
 
 # voltage_scale
-# 1.7578125 8bit
-# 0.439453125 12bit
+# 1.7578125 1.8v/10bit
+# 3.222656250 3.3v/10bit
+# 0.439453125 1.8v/12bit
+# 0.8056640625 3.3v/12bit
 get_index(){
-    ADC_RAW=$1
+
+    ADC_RAW=$(cat /sys/bus/iio/devices/iio\:device0/in_voltage${1}_raw)
+    echo ADC_CH:$1 ADC_RAW:$ADC_RAW
     INDEX=0xff
 
     if [ $(echo "$ADC_voltage_scale > 1 "|bc) -eq 1 ] ; then
@@ -182,21 +219,24 @@ board_id() {
     ADC_voltage_scale=$(cat /sys/bus/iio/devices/iio\:device0/in_voltage_scale)
     echo "ADC_voltage_scale:"$ADC_voltage_scale
 
-    SOC_type=$(cat /proc/device-tree/compatible | cut -d,  -f 3)
+    SOC_type=$(cat /proc/device-tree/compatible | cut -d,  -f 3 | sed 's/\x0//g')
     echo "SOC_type:"$SOC_type
 
-    ADC_CH2_RAW=$(cat /sys/bus/iio/devices/iio\:device0/in_voltage2_raw)
-    echo "ADC_CH2_RAW:"$ADC_CH2_RAW
-    ADC_CH3_RAW=$(cat /sys/bus/iio/devices/iio\:device0/in_voltage3_raw)
-    echo "ADC_CH3_RAW:"$ADC_CH3_RAW
+    if [[ "$SOC_type" == "rk3128" ]]; then
+        get_index 0
+        ADC_INDEX_H=$INDEX
 
-    get_index $ADC_CH2_RAW
-    ADC_CH2_INDEX=$INDEX
+        get_index 2
+        ADC_INDEX_L=$INDEX
+    else
+        get_index 2
+        ADC_INDEX_H=$INDEX
 
-    get_index $ADC_CH3_RAW
-    ADC_CH3_INDEX=$INDEX
+        get_index 3
+        ADC_INDEX_L=$INDEX
+    fi
 
-    BOARD_ID=$ADC_CH2_INDEX$ADC_CH3_INDEX
+    BOARD_ID=$ADC_INDEX_H$ADC_INDEX_L
     echo "BOARD_ID:"$BOARD_ID
 }
 
@@ -218,11 +258,14 @@ if [ ! -e "/boot/boot_init" ] ; then
                 case $x in
                 root=*)
                     Root_Part=${x#root=}
-                    Boot_Part="${Root_Part::-2}"p2
+                    ;;
+                boot_part=*)
+                    Boot_Part_Num=${x#boot_part=}
                     ;;
                 esac
             done
 
+            Boot_Part="${Root_Part::-1}${Boot_Part_Num}"
             mount "$Boot_Part" /boot
             echo "$Boot_Part  /boot  auto  defaults  0 2" >> /etc/fstab
         fi

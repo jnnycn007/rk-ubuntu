@@ -19,32 +19,42 @@ install_packages() {
 		# 3288w
 		cat /sys/devices/platform/*gpu/gpuinfo | grep -q r1p0 && \
 		MALI=midgard-t76x-r18p0-r1p0
+		sed -i "s/always/none/g" /etc/X11/xorg.conf.d/20-modesetting.conf
 		;;
         rk3399|rk3399pro)
 		MALI=midgard-t86x-r18p0
 		ISP=rkisp
+		sed -i "s/always/none/g" /etc/X11/xorg.conf.d/20-modesetting.conf
 		;;
-        rk3328)
+        rk3328|rk3528)
 		MALI=utgard-450
 		ISP=rkisp
+		sed -i "s/always/none/g" /etc/X11/xorg.conf.d/20-modesetting.conf
 		;;
         rk3326|px30)
-		MALI=bifrost-g31-g2p0
+		MALI=bifrost-g31-g13p0
 		ISP=rkisp
+		sed -i "s/always/none/g" /etc/X11/xorg.conf.d/20-modesetting.conf
 		;;
         rk3128|rk3036)
 		MALI=utgard-400
 		ISP=rkisp
+		sed -i "s/always/none/g" /etc/X11/xorg.conf.d/20-modesetting.conf
 		;;
         rk3568|rk3566)
 		MALI=bifrost-g52-g13p0
 		ISP=rkaiq_rk3568
-		[ -e /usr/lib/aarch64-linux-gnu/ ] && tar xvf /rknpu2-*.tar -C /
+		[ -e /usr/lib/aarch64-linux-gnu/ ] && tar xvf /rknpu2.tar -C /
+		;;
+        rk3562)
+		MALI=bifrost-g52-g13p0
+		ISP=rkaiq_rk3562
+		[ -e /usr/lib/aarch64-linux-gnu/ ] && tar xvf /rknpu2.tar -C /
 		;;
         rk3588|rk3588s)
 		ISP=rkaiq_rk3588
 		MALI=valhall-g610-g13p0
-		[ -e /usr/lib/aarch64-linux-gnu/ ] && tar xvf /rknpu2-*.tar -C /
+		[ -e /usr/lib/aarch64-linux-gnu/ ] && tar xvf /rknpu2.tar -C /
 		;;
     esac
 }
@@ -72,16 +82,29 @@ elif [[ $COMPATIBLE =~ "px30" ]]; then
     CHIPNAME="px30"
 elif [[ $COMPATIBLE =~ "rk3128" ]]; then
     CHIPNAME="rk3128"
+elif [[ $COMPATIBLE =~ "rk3528" ]]; then
+    CHIPNAME="rk3528"
+elif [[ $COMPATIBLE =~ "rk3562" ]]; then
+    CHIPNAME="rk3562"
 elif [[ $COMPATIBLE =~ "rk3566" ]]; then
     CHIPNAME="rk3566"
 elif [[ $COMPATIBLE =~ "rk3568" ]]; then
     CHIPNAME="rk3568"
 elif [[ $COMPATIBLE =~ "rk3588" ]]; then
     CHIPNAME="rk3588"
-else
+elif [[ $COMPATIBLE =~ "rk3036" ]]; then
     CHIPNAME="rk3036"
+elif [[ $COMPATIBLE =~ "rk3308" ]]; then
+    CHIPNAME="rk3208"
+elif [[ $COMPATIBLE =~ "rv1126" ]]; then
+    CHIPNAME="rv1126"
+elif [[ $COMPATIBLE =~ "rv1109" ]]; then
+    CHIPNAME="rv1109"
+else
+    echo "please check if the Socs had been supported on rockchip linux!!!!!!!"
 fi
 COMPATIBLE=${COMPATIBLE#rockchip,}
+BOARDNAME=${COMPATIBLE%%rockchip,*}
 
 /etc/init.d/boot_init.sh
 
@@ -111,14 +134,6 @@ then
 
     if [ -e /usr/bin/gst-launch-1.0 ]; then
         setcap CAP_SYS_ADMIN+ep /usr/bin/gst-launch-1.0
-
-        # Cannot open pixbuf loader module file
-        if [ -e "/usr/lib/arm-linux-gnueabihf" ] ; then
-            /usr/lib/arm-linux-gnueabihf/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders > /usr/lib/arm-linux-gnueabihf/gdk-pixbuf-2.0/2.10.0/loaders.cache
-            update-mime-database /usr/share/mime/
-        elif [ -e "/usr/lib/aarch64-linux-gnu" ]; then
-            /usr/lib/aarch64-linux-gnu/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders > /usr/lib/aarch64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders.cache
-        fi
     fi
 
     if [ -e "/dev/rfkill" ] ; then
@@ -135,7 +150,12 @@ then
         systemctl restart lightdm.service || true
     fi
 
-    systemctl restart rkaiq_3A.service || true
+    if [ -e /usr/lib/systemd/system/rkisp_3A.service ]; then
+        systemctl restart rkisp_3A.service || true
+    elif [ -e /usr/lib/systemd/system/rkaiq_3A.service ]; then
+        systemctl restart rkaiq_3A.service || true
+    fi
+
     touch /usr/local/first_boot_flag
 fi
 
@@ -155,6 +175,8 @@ then
         mv /etc/Powermanager/01npu /usr/lib/pm-utils/sleep.d/
         mv /etc/Powermanager/02npu /lib/systemd/system-sleep/
     fi
+    mv /etc/Powermanager/03wifibt /usr/lib/pm-utils/sleep.d/
+    mv /etc/Powermanager/04wifibt /lib/systemd/system-sleep/
     mv /etc/Powermanager/triggerhappy /etc/init.d/triggerhappy
 
     rm /etc/Powermanager -rf
