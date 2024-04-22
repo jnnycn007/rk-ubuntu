@@ -82,6 +82,7 @@ echo -e "\033[47;36m Change root.................... \033[0m"
 
 cat <<EOF | sudo chroot $TARGET_ROOTFS_DIR/
 
+export DEBIAN_FRONTEND=noninteractive
 export APT_INSTALL="apt-get install -fy --allow-downgrades"
 
 export LC_ALL=C.UTF-8
@@ -90,34 +91,34 @@ apt-get -y update
 apt-get -f -y upgrade
 
 if [ "$TARGET" == "gnome" ]; then
-    DEBIAN_FRONTEND=noninteractive apt install -y ubuntu-desktop-minimal rsyslog sudo dialog apt-utils ntp evtest onboard
+    apt install -y ubuntu-desktop-minimal rsyslog sudo dialog apt-utils ntp evtest onboard
     mv /var/lib/dpkg/info/ /var/lib/dpkg/info_old/
     mkdir /var/lib/dpkg/info/
     apt-get update
-    DEBIAN_FRONTEND=noninteractive apt install -y ubuntu-desktop-minimal rsyslog sudo dialog apt-utils ntp evtest onboard
+    apt install -y ubuntu-desktop-minimal rsyslog sudo dialog apt-utils ntp evtest onboard
     mv /var/lib/dpkg/info_old/* /var/lib/dpkg/info/
 elif [ "$TARGET" == "xfce" ]; then
-    DEBIAN_FRONTEND=noninteractive apt install -y xubuntu-core onboard rsyslog sudo dialog apt-utils ntp evtest udev
+    apt install -y xubuntu-core onboard rsyslog sudo dialog apt-utils ntp evtest udev
     mv /var/lib/dpkg/info/ /var/lib/dpkg/info_old/
     mkdir /var/lib/dpkg/info/
     apt-get update
-    DEBIAN_FRONTEND=noninteractive apt install -y xubuntu-core onboard rsyslog sudo dialog apt-utils ntp evtest udev
+    apt install -y xubuntu-core onboard rsyslog sudo dialog apt-utils ntp evtest udev
     mv /var/lib/dpkg/info_old/* /var/lib/dpkg/info/
 elif [ "$TARGET" == "lite" ]; then
-    DEBIAN_FRONTEND=noninteractive apt install -y rsyslog sudo dialog apt-utils ntp evtest acpid
+    apt install -y rsyslog sudo dialog apt-utils ntp evtest acpid
 elif [ "$TARGET" == "gnome-full" ]; then
-    DEBIAN_FRONTEND=noninteractive apt install -y ubuntu-desktop-minimal rsyslog sudo dialog apt-utils ntp evtest onboard
+    apt install -y ubuntu-desktop-minimal rsyslog sudo dialog apt-utils ntp evtest onboard
     mv /var/lib/dpkg/info/ /var/lib/dpkg/info_old/
     mkdir /var/lib/dpkg/info/
     apt-get update
-    DEBIAN_FRONTEND=noninteractive apt install -y ubuntu-desktop-minimal rsyslog sudo dialog apt-utils ntp evtest onboard
+    apt install -y ubuntu-desktop-minimal rsyslog sudo dialog apt-utils ntp evtest onboard
     mv /var/lib/dpkg/info_old/* /var/lib/dpkg/info/
 elif [ "$TARGET" == "xfce-full" ]; then
-    DEBIAN_FRONTEND=noninteractive apt install -y xubuntu-desktop onboard rsyslog sudo dialog apt-utils ntp evtest udev
+    apt install -y xubuntu-desktop onboard rsyslog sudo dialog apt-utils ntp evtest udev
     mv /var/lib/dpkg/info/ /var/lib/dpkg/info_old/
     mkdir /var/lib/dpkg/info/
     apt-get update
-    DEBIAN_FRONTEND=noninteractive apt install -y xubuntu-desktop onboard rsyslog sudo dialog apt-utils ntp evtest udev
+    apt install -y xubuntu-desktop onboard rsyslog sudo dialog apt-utils ntp evtest udev
     mv /var/lib/dpkg/info_old/* /var/lib/dpkg/info/
 fi
 
@@ -243,6 +244,3 @@ DATE=$(date +%Y%m%d)
 echo -e "\033[47;36m Run tar pack ubuntu-base-$TARGET-$ARCH-$DATE.tar.gz \033[0m"
 sudo tar zcf ubuntu-base-$TARGET-$ARCH-$DATE.tar.gz $TARGET_ROOTFS_DIR
 
-# sudo rm $TARGET_ROOTFS_DIR -r
-
-echo -e "\033[47;36m normal exit \033[0m"
