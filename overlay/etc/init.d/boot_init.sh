@@ -2,49 +2,7 @@
 
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 board_info() {
-    if [[ "$2" == "rk3128" ]]; then
-        case $1 in
-            0000)
-                BOARD_NAME='LubanCat-0H'
-                BOARD_DTB='rk3128-lubancat-0h.dtb'
-                BOARD_uEnv='uEnvLubanCat0H.txt'
-                ;;
-            *)
-                echo "Device ID Error !!!"
-                BOARD_NAME='LubanCat-RK3128'
-                BOARD_DTB='rk3128-lubancat-generic.dtb'
-                BOARD_uEnv='uEnvLubanCat.txt'
-                ;;
-        esac
-    elif [[ "$2" == "rk3528" ||  "$2" == "rk3528a" ]]; then
-        case $1 in
-            0001)
-                BOARD_NAME='LubanCat-Q1'
-                BOARD_DTB='rk3528-lubancat-q1.dtb'
-                BOARD_uEnv='uEnvLubanCatQ1.txt'
-                ;;
-            *)
-                echo "Device ID Error !!!"
-                BOARD_NAME='LubanCat-RK3528'
-                BOARD_DTB='rk3528-lubancat-generic.dtb'
-                BOARD_uEnv='uEnvLubanCat.txt'
-                ;;
-        esac
-    elif [[ "$2" == "rk3562" ]]; then
-        case $1 in
-            0000)
-                BOARD_NAME='LubanCat-1HS'
-                BOARD_DTB='rk3562-lubancat-1hs.dtb'
-                BOARD_uEnv='uEnvLubanCat1HS.txt'
-                ;;
-            *)
-                echo "Device ID Error !!!"
-                BOARD_NAME='LubanCat-RK3562'
-                BOARD_DTB='rk3562-lubancat-generic.dtb'
-                BOARD_uEnv='uEnvLubanCat.txt'
-                ;;
-        esac
-    elif [[ "$2" == "rk3566" ||  "$2" == "rk3568" ]]; then
+    if [[ "$2" == "rk3566" ||  "$2" == "rk3568" ]]; then
         case $1 in
             0000)
                 BOARD_NAME='LubanCat-1'
@@ -258,14 +216,11 @@ if [ ! -e "/boot/boot_init" ] ; then
                 case $x in
                 root=*)
                     Root_Part=${x#root=}
-                    ;;
-                boot_part=*)
-                    Boot_Part_Num=${x#boot_part=}
+                    Boot_Part="${Root_Part::-2}"p2
                     ;;
                 esac
             done
 
-            Boot_Part="${Root_Part::-1}${Boot_Part_Num}"
             mount "$Boot_Part" /boot
             echo "$Boot_Part  /boot  auto  defaults  0 2" >> /etc/fstab
         fi
