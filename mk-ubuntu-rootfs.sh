@@ -279,7 +279,7 @@ if [[ "$TARGET" == "gnome" || "$TARGET" == "gnome-full" ]]; then
 elif [[ "$TARGET" == "xfce" || "$TARGET" == "xfce-full" ]]; then
     echo -e "\033[47;36m ----- Install Xserver------- \033[0m"
     \${APT_INSTALL} /packages/xserver/*.deb
-    # apt-mark hold xserver-common xserver-xorg-core xserver-xorg-legacy
+    apt-mark hold xserver-common xserver-xorg-core xserver-xorg-legacy
 fi
 
 if [[ "$TARGET" == "gnome" ||  "$TARGET" == "xfce" || "$TARGET" == "gnome-full" || "$TARGET" == "xfce-full" ]]; then
@@ -315,7 +315,7 @@ echo -e "\033[47;36m ----- Install rktoolkit ----- \033[0m"
 if [[ "$TARGET" == "gnome" ||  "$TARGET" == "xfce" || "$TARGET" == "gnome-full" || "$TARGET" == "xfce-full" ]]; then
     echo -e "\033[47;36m ------ Install ffmpeg ------- \033[0m"
     \${APT_INSTALL} ffmpeg
-    \${APT_INSTALL} /packages/ffmpeg/*.deb
+    # \${APT_INSTALL} /packages/ffmpeg/*.deb
 fi
 
 if [[ "$TARGET" == "gnome" ||  "$TARGET" == "xfce" || "$TARGET" == "gnome-full" || "$TARGET" == "xfce-full" ]]; then
@@ -331,7 +331,7 @@ fi
 apt autoremove -y
 
 # mark package to hold
-apt list --installed | grep -v oldstable | cut -d/ -f1 | xargs apt-mark hold
+apt list --upgradable | cut -d/ -f1 | xargs apt-mark hold
 
 echo -e "\033[47;36m ------- Custom Script ------- \033[0m"
 systemctl mask systemd-networkd-wait-online.service
