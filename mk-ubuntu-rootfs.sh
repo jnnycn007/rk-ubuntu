@@ -147,6 +147,7 @@ sudo tar -xpf ubuntu-base-$TARGET-$ARCH-*.tar.gz
 # packages folder
 sudo mkdir -p $TARGET_ROOTFS_DIR/packages
 sudo cp -rpf packages/$ARCH/* $TARGET_ROOTFS_DIR/packages
+sudo cp -rpfv packages/soc/$SOC/* $TARGET_ROOTFS_DIR/packages || true
 
 #GPU/CAMERA packages folder
 install_packages
